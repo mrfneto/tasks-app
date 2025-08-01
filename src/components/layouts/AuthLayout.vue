@@ -1,17 +1,30 @@
-<script setup>
+<script setup lang="ts">
 import AppLogo from '../ui/AppLogo.vue'
+import BaseCard from '../ui/BaseCard.vue'
 </script>
+
 <template>
-  <div class="min-h-screen w-full lg:grid lg:grid-cols-2">
-    <div class="flex items-center justify-center py-12">
-      <div class="mx-auto grid w-full max-w-md gap-6">
-        <slot />
+  <div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <AppLogo to="/" />
       </div>
-    </div>
-    <div
-      class="hidden lg:flex-1 bg-gray-200 bg-muted lg:flex lg:items-center lg:justify-center"
-    >
-      <AppLogo />
+
+      <!-- Auth Content -->
+      <BaseCard>
+        <slot />
+      </BaseCard>
+
+      <!-- Back to Home -->
+      <div class="text-center mt-6">
+        <router-link
+          :to="{ name: 'home' }"
+          class="text-gray-600 hover:text-gray-900 text-sm transition-colors duration-200"
+        >
+          ← Voltar ao início
+        </router-link>
+      </div>
     </div>
   </div>
 </template>

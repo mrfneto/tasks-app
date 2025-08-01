@@ -2,20 +2,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useTaskStore } from '@/stores/task'
+import { Loader, Loader2, MoveLeft } from 'lucide-vue-next'
 
-import AdminLayout from '@/components/layouts/AdminLayout.vue'
-import FormLabel from '@/components/ui/FormLabel.vue'
-import FormInput from '@/components/ui/FormInput.vue'
-import FormSubmit from '@/components/ui/FormSubmit.vue'
-import FormTextarea from '@/components/ui/FormTextarea.vue'
-import FormError from '@/components/ui/FormError.vue'
-import { MoveLeft } from 'lucide-vue-next'
+import AppLayout from '@/components/layouts/AppLayout.vue'
+import BaseInput from '../components/ui/BaseInput.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
+import AppLoader from '../components/ui/AppLoader.vue'
 
 const router = useRouter()
 const route = useRoute()
 const taskStore = useTaskStore()
 
-const loading = ref(false)
+const loading = ref(true)
+const isSaving = ref(false)
+const isDelenting = ref(false)
+const isConfirm = ref(false)
+
 const error = ref(null)
 
 const form = ref({
@@ -23,9 +25,9 @@ const form = ref({
   description: '',
   completed: false
 })
-const isDelenting = ref(false)
 
 const id = computed(() => route.params.id || null)
+
 const handleSubmit = async () => {
   error.value = null
 
@@ -34,7 +36,7 @@ const handleSubmit = async () => {
     return
   }
 
-  loading.value = true
+  isSaving.value = true
 
   try {
     await taskStore.save(form.value, id.value)
@@ -42,28 +44,28 @@ const handleSubmit = async () => {
   } catch (err) {
     error.value = err.message || 'Erro ao salvar a tarefa'
   } finally {
-    loading.value = false
+    isSaving.value = false
   }
 }
 
 const handleDelete = async () => {
   if (!id.value) return
 
-  if (!isDelenting.value) {
-    isDelenting.value = true
+  if (!isConfirm.value) {
+    isConfirm.value = true
     setTimeout(() => {
-      isDelenting.value = false
+      isConfirm.value = false
     }, 3000)
   } else {
-    loading.value = true
+    isDelenting.value = true
     try {
       await taskStore.remove(id.value)
       router.push({ name: 'home' })
-      isDelenting.value = false
+      isConfirm.value = false
     } catch (err) {
       error.value = err.message || 'Erro ao excluir a tarefa'
     } finally {
-      loading.value = false
+      isDelenting.value = false
     }
   }
 }
@@ -83,65 +85,68 @@ onMounted(async () => {
       }
     } catch (err) {
       error.value = 'Erro ao carregar tarefa.'
+    } finally {
+      loading.value = false
     }
   }
 })
 </script>
 
 <template>
-  <AdminLayout>
+  <AppLayout :title="id ? 'Editar Tarefa' : 'Nova Tarefa'">
+    <template #actions>
+      <BaseButton :to="{ name: 'home' }" variant="secondary">
+        <MoveLeft class="size-4 mr-2" />
+        Voltar
+      </BaseButton>
+    </template>
     <div class="w-full max-w-md mx-auto">
-      <div class="flex items-center space-x-2 mb-8">
-        <RouterLink :to="{ name: 'home' }" class="btn btn-ghost btn-icon">
-          <MoveLeft class="w-5 h-5" />
-          <span class="sr-only">Voltar</span>
-        </RouterLink>
+      <AppLoader v-if="loading" />
+      <form v-else @submit.prevent="handleSubmit" class="space-y-6">
+        <BaseInput
+          id="title"
+          placeholder="Digite o título da tarefa"
+          v-model="form.title"
+          :disabled="isSaving"
+          label="Título"
+          required
+        />
+        <BaseInput
+          id="description"
+          type="textarea"
+          placeholder="Digite a descrição da tarefa"
+          v-model="form.description"
+          :disabled="isSaving"
+          label="Descrição"
+          required
+        />
 
-        <h1 class="heading-xl mb-0">
-          {{ id ? 'Editar Tarefa' : 'Nova Tarefa' }}
-        </h1>
-      </div>
-
-      <form @submit.prevent="handleSubmit">
-        <div class="mb-4">
-          <FormLabel for="title">Título</FormLabel>
-          <FormInput
-            id="title"
-            type="text"
-            placeholder="Digite o título da tarefa"
-            v-model="form.title"
-            :disabled="loading"
-          />
+        <div class="flex items-center space-x-2">
+          <BaseButton :loading="isSaving" class="flex-1">
+            {{ id ? 'Alterar' : 'Cadastrar' }} Tarefa
+          </BaseButton>
+          <BaseButton
+            v-if="id"
+            type="button"
+            variant="secondary"
+            :loading="isDelenting"
+            tabindex="-1"
+            @click="handleDelete"
+          >
+            <span v-if="isConfirm" class="text-primary-500">
+              Confimar exclusão
+            </span>
+            <span v-else class="text-red-500">Excluir Tarefa</span>
+          </BaseButton>
         </div>
-
-        <div class="mb-6">
-          <FormLabel for="description">Descrição</FormLabel>
-          <FormTextarea
-            id="description"
-            placeholder="Digite a descrição da tarefa"
-            v-model="form.description"
-            :disabled="loading"
-          />
-        </div>
-
-        <FormSubmit class="w-full btn-primary" :loading="loading">
-          {{ id ? 'Alterar' : 'Cadastrar' }} Tarefa
-        </FormSubmit>
       </form>
 
-      <button
-        tabindex="-1"
-        @click="handleDelete"
-        v-if="id"
-        class="btn btn-ghost w-full mt-2"
+      <div
+        v-if="error"
+        class="bg-red-50 border border-red-200 rounded-lg p-4 mt-6"
       >
-        <span v-if="isDelenting" class="text-green-500">Confimar exclusão</span>
-        <span v-else class="text-red-500">Excluir Tarefa</span>
-      </button>
-
-      <div class="mt-4 text-center">
-        <FormError v-if="error" :message="error" />
+        <p class="text-red-700 text-sm">{{ error }}</p>
       </div>
     </div>
-  </AdminLayout>
+  </AppLayout>
 </template>

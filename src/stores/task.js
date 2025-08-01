@@ -26,12 +26,8 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   const fetchById = async id => {
-    const taskDoc = await getDoc(doc(db, 'tasks', id))
-    if (taskDoc.exists()) {
-      return { ...taskDoc.data() }
-    } else {
-      throw new Error('Task not found')
-    }
+    const result = await getDoc(doc(db, 'tasks', id))
+    return result.exists() ? { ...result.data() } : null
   }
 
   const save = async (task, id = null) =>

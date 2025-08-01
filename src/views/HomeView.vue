@@ -2,15 +2,19 @@
 import { computed, ref, onMounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
 
-import { CheckSquare, Edit, PlusCircle, Square } from 'lucide-vue-next'
-import AdminLayout from '@/components/layouts/AdminLayout.vue'
+import { CheckSquare, Edit, Plus, Square } from 'lucide-vue-next'
+import AppLayout from '@/components/layouts/AppLayout.vue'
+import BaseButton from '../components/ui/BaseButton.vue'
+import AppLoader from '../components/ui/AppLoader.vue'
 
 const taskStore = useTaskStore() // Assuming you have a task store to handle tasks
 
 const filter = ref('all')
+const loading = ref(true)
 
 onMounted(async () => {
   await taskStore.fetch() // Fetch tasks when the component is mounted
+  loading.value = false
 })
 
 const filterTasks = computed(() => {
@@ -34,56 +38,52 @@ const toggleCompletion = async (task, id) => {
 }
 </script>
 <template>
-  <AdminLayout>
-    <div
-      class="bg-primary-100 p-6 rounded-md flex flex-col-reverse lg:flex-row gap-2"
-    >
-      <div class="">
-        <h1 class="heading-xl mb-0">Minha Tarefas</h1>
-        <p class="text-secondary-500">
-          Aqui estão as tarefas que você precisa completar.
-        </p>
-      </div>
-
-      <div class="flex-1 flex lg:justify-end items-start">
-        <RouterLink
-          :to="{ name: 'form-create' }"
-          class="btn btn-primary mt-4 text-sm"
-        >
-          <PlusCircle class="w-4 h-4 mr-2" />
-          <span>Criar Tarefa</span>
-        </RouterLink>
-      </div>
-    </div>
+  <AppLayout
+    title="Minha Tarefas"
+    description="Gerencie as tarefas cadastradas ou cadastre uma nova."
+  >
+    <template #actions>
+      <BaseButton :to="{ name: 'form-create' }">
+        <Plus class="size-4 mr-2" />
+        Nova Tarefa
+      </BaseButton>
+    </template>
 
     <div
       class="flex items-center space-x-1 p-0.5 border border-gray-200 mt-6 lg:w-1/2"
     >
-      <button
+      <BaseButton
         @click="filter = 'all'"
-        class="btn w-full"
-        :class="filter === 'all' ? 'btn-primary' : 'btn-ghost'"
+        :variant="filter === 'all' ? 'primary' : 'secondary'"
+        full-width
       >
         Todos
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton
         @click="filter = 'pending'"
-        class="btn w-full"
-        :class="filter === 'pending' ? 'btn-primary' : 'btn-ghost'"
+        :variant="filter === 'pending' ? 'primary' : 'secondary'"
+        full-width
       >
         Pendentes
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton
         @click="filter = 'completed'"
-        class="btn w-full"
-        :class="filter === 'completed' ? 'btn-primary' : 'btn-ghost'"
+        :variant="filter === 'completed' ? 'primary' : 'secondary'"
+        full-width
       >
         Concluídos
-      </button>
+      </BaseButton>
     </div>
 
     <div class="mt-6">
       <div class="flex flex-col space-y-4">
+        <AppLoader v-if="loading" />
+        <div
+          v-else-if="filterTasks.length === 0"
+          class="text-center text-gray-500"
+        >
+          Nenhuma tarefa encontrada.
+        </div>
         <div
           v-for="task in filterTasks"
           :key="task.id"
@@ -100,20 +100,18 @@ const toggleCompletion = async (task, id) => {
             <h3 class="heading-lg mb-0">{{ task.title }}</h3>
             <p class="text-secondary-500 text-sm">{{ task.description }}</p>
           </div>
-          <RouterLink
+          <BaseButton
+            icon
+            size="sm"
             :to="{ name: 'form-update', params: { id: task.id } }"
-            class="btn btn-ghost btn-icon"
+            variant="secondary"
           >
-            <Edit class="w-5 h-5 text-gray-500" />
-          </RouterLink>
-        </div>
-
-        <div v-if="filterTasks.length === 0" class="text-center text-gray-500">
-          Nenhuma tarefa encontrada.
+            <Edit class="w-4 h-4 text-gray-500" />
+          </BaseButton>
         </div>
       </div>
     </div>
-  </AdminLayout>
+  </AppLayout>
 </template>
 
 <style scoped></style>

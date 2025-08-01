@@ -1,10 +1,16 @@
 <script setup>
-import { ListTodo } from 'lucide-vue-next'
+defineProps({
+  to: [String, Object]
+})
 </script>
 
 <template>
-  <RouterLink to="/" class="heading-lg mb-0 flex items-center">
-    <ListTodo class="w-6 h-6 mr-2" />
-    <span class="text-lg font-bold">Tasks App</span>
-  </RouterLink>
+  <router-link :to="to" class="flex items-center space-x-2">
+    <div
+      class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center"
+    >
+      <span class="text-white text-lg font-bold">A</span>
+    </div>
+    <span class="text-xl font-semibold text-gray-900">App</span>
+  </router-link>
 </template>

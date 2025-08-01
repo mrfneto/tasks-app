@@ -25,30 +25,17 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
-  const login = payload =>
-    signInWithEmailAndPassword(auth, payload.email, payload.password)
+  const login = (email, password) =>
+    signInWithEmailAndPassword(auth, email, password)
   const logout = () => signOut(auth)
-  const register = payload =>
-    createUserWithEmailAndPassword(auth, payload.email, payload.password)
-
-  const getErrorMessage = errorCode => {
-    const errorMessages = {
-      'auth/user-not-found': 'Usuário não encontrado',
-      'auth/wrong-password': 'Senha incorreta',
-      'auth/email-already-in-use': 'Este email já está em uso',
-      'auth/weak-password': 'A senha deve ter pelo menos 6 caracteres',
-      'auth/invalid-email': 'Email inválido',
-      'auth/too-many-requests': 'Muitas tentativas. Tente novamente mais tarde'
-    }
-    return errorMessages[errorCode] || 'Erro desconhecido'
-  }
+  const register = (email, password) =>
+    createUserWithEmailAndPassword(auth, email, password)
 
   return {
     user,
     login,
     logout,
     register,
-    getCurrentUser,
-    getErrorMessage
+    getCurrentUser
   }
 })
