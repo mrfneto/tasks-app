@@ -4,9 +4,9 @@ import { useRouter, useRoute } from 'vue-router'
 import { useTaskStore } from '@/stores/task'
 
 import AppLayout from '@/components/layouts/AppLayout.vue'
-import BaseInput from '../components/ui/BaseInput.vue'
-import BaseButton from '../components/ui/BaseButton.vue'
-import AppLoader from '../components/ui/AppLoader.vue'
+import BaseInput from '@/components/ui/BaseInput.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
+import AppLoader from '@/components/ui/AppLoader.vue'
 
 import { MoveLeft } from 'lucide-vue-next'
 
@@ -36,16 +36,21 @@ const setError = msg => {
 
 const handleSubmit = async () => {
   state.value.error = null
+
   if (!form.value.title.trim()) {
     return setError('O título é obrigatório.')
   }
 
   state.value.saving = true
   try {
-    await taskStore.save(form.value, id)
+    if (id) {
+      await taskStore.update(id, form.value)
+    } else {
+      await taskStore.create(form.value)
+    }
     router.push({ name: 'home' })
   } catch (err) {
-    setError(err.message || 'Erro ao salvar a tarefa')
+    setError(err?.message || 'Erro ao salvar a tarefa')
   } finally {
     state.value.saving = false
   }
@@ -64,7 +69,7 @@ const handleDelete = async () => {
     await taskStore.remove(id)
     router.push({ name: 'home' })
   } catch (err) {
-    setError(err.message || 'Erro ao excluir a tarefa')
+    setError(err?.message || 'Erro ao excluir a tarefa')
   } finally {
     state.value.deleting = false
     state.value.confirmDelete = false
@@ -78,7 +83,7 @@ onMounted(async () => {
   }
 
   try {
-    const task = await taskStore.fetchById(id)
+    const task = await taskStore.getById(id)
     if (task) {
       form.value = {
         title: task.title,
@@ -89,7 +94,7 @@ onMounted(async () => {
       setError('Tarefa não encontrada.')
     }
   } catch {
-    setError('Erro ao carregar tarefa.')
+    setError('Erro ao carregar a tarefa.')
   } finally {
     state.value.loading = false
   }
@@ -124,7 +129,6 @@ onMounted(async () => {
           placeholder="Digite a descrição da tarefa"
           v-model="form.description"
           :disabled="state.saving"
-          required
         />
 
         <div class="flex items-center space-x-2">

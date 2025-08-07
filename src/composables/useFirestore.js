@@ -26,7 +26,12 @@ export function useFirestore(collectionName) {
   const unsubscribe = ref(null)
   const { toast, confirm } = useSweet()
 
-  const buildQuery = ({ filters = [], order = [], limit = 10, start = null } = {}) => {
+  const buildQuery = ({
+    filters = [],
+    order = [],
+    limit = 10,
+    start = null
+  } = {}) => {
     let q = query(collection(db, collectionName))
 
     filters.forEach(([field, operator, value]) => {
@@ -53,16 +58,25 @@ export function useFirestore(collectionName) {
       const q = buildQuery(options)
       if (realtime) {
         unsubscribe.value = onSnapshot(q, snapshot => {
-          items.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+          items.value = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          lastVisible.value = snapshot.docs.at(-1) || null
+          hasMore.value = snapshot.docs.length >= (options?.limit || 10)
         })
       } else {
         const snapshot = await getDocs(q)
         items.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        lastVisible.value = snapshot.docs[snapshot.docs.length - 1]
+        lastVisible.value = snapshot.docs.at(-1) || null
         hasMore.value = snapshot.docs.length >= (options?.limit || 10)
       }
     } catch (err) {
-      toast('Erro ao buscar dados', err.message, 'error')
+      toast(
+        'Erro ao buscar dados',
+        err?.message || 'Erro desconhecido',
+        'error'
+      )
     } finally {
       loading.value = false
     }
@@ -74,15 +88,21 @@ export function useFirestore(collectionName) {
       const q = buildQuery({ ...options, start: lastVisible.value })
       const snapshot = await getDocs(q)
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      if (data.length === 0) {
+        hasMore.value = false
+        return
+      }
       items.value.push(...data)
-      lastVisible.value = snapshot.docs[snapshot.docs.length - 1]
-      if (snapshot.docs.length < (options?.limit || 10)) hasMore.value = false
+      lastVisible.value = snapshot.docs.at(-1) || null
+      if (snapshot.docs.length < (options?.limit || 10)) {
+        hasMore.value = false
+      }
     } catch (err) {
       toast('Erro ao carregar mais', err.message, 'error')
     }
   }
 
-  const getById = async (id) => {
+  const getById = async id => {
     try {
       const refDoc = doc(db, collectionName, id)
       const snapshot = await getDoc(refDoc)
@@ -93,7 +113,7 @@ export function useFirestore(collectionName) {
     }
   }
 
-  const create = async (data) => {
+  const create = async data => {
     try {
       const docRef = await addDoc(collection(db, collectionName), data)
       toast('Item criado com sucesso', '', 'success')
@@ -108,19 +128,26 @@ export function useFirestore(collectionName) {
     try {
       await updateDoc(doc(db, collectionName, id), data)
       toast('Item atualizado', '', 'success')
+      return true
     } catch (err) {
       toast('Erro ao atualizar item', err.message, 'error')
+      return false
     }
   }
 
-  const remove = async (id) => {
-    const confirmed = await confirm('Deseja realmente remover?', 'Essa ação não pode ser desfeita!')
-    if (!confirmed) return
+  const remove = async id => {
+    const confirmed = await confirm(
+      'Deseja realmente remover?',
+      'Essa ação não pode ser desfeita!'
+    )
+    if (!confirmed) return false
     try {
       await deleteDoc(doc(db, collectionName, id))
       toast('Item removido', '', 'success')
+      return true
     } catch (err) {
       toast('Erro ao remover item', err.message, 'error')
+      return false
     }
   }
 
@@ -137,6 +164,6 @@ export function useFirestore(collectionName) {
     getById,
     create,
     update,
-    remove,
+    remove
   }
 }

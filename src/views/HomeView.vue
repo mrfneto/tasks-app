@@ -1,45 +1,36 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
+import { storeToRefs } from 'pinia'
 
 import AppLayout from '@/components/layouts/AppLayout.vue'
-import BaseButton from '../components/ui/BaseButton.vue'
-import AppLoader from '../components/ui/AppLoader.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
+import AppLoader from '@/components/ui/AppLoader.vue'
 
 import { CheckSquare, Edit, Plus, Square } from 'lucide-vue-next'
 
 const taskStore = useTaskStore()
+const { loadMore } = taskStore
+const { tasks, filterCompleted, loading } = storeToRefs(taskStore)
 
-const state = ref({
-  filter: 'all',
-  loading: true
+onMounted(() => {
+  taskStore.getAll()
 })
 
-onMounted(async () => {
-  await taskStore.fetch()
-  state.value.loading = false
-})
-
-const filteredTasks = computed(() => {
-  switch (state.value.filter) {
-    case 'pending':
-      return taskStore.tasks.filter(t => !t.completed)
-    case 'completed':
-      return taskStore.tasks.filter(t => t.completed)
-    default:
-      return taskStore.tasks
-  }
-})
+const filteredTasks = type => {
+  filterCompleted.value = type
+  taskStore.getAll()
+}
 
 const toggleCompletion = async task => {
-  task.completed = !task.completed
-  await taskStore.save(task, task.id)
+  const updated = { ...task, completed: !task.completed }
+  await taskStore.update(task.id, updated)
 }
 </script>
 
 <template>
   <AppLayout
-    title="Minha Tarefas"
+    title="Minhas Tarefas"
     description="Gerencie as tarefas cadastradas ou cadastre uma nova."
   >
     <template #actions>
@@ -50,13 +41,13 @@ const toggleCompletion = async task => {
     </template>
 
     <div
-      class="flex items-center space-x-1 p-0.5 border border-gray-200 mt-6 lg:w-1/2"
+      class="flex items-center space-x-2 rounded-md p-0.5 border border-gray-200 mt-6 lg:w-1/2"
     >
       <BaseButton
         v-for="type in ['all', 'pending', 'completed']"
         :key="type"
-        @click="state.filter = type"
-        :variant="state.filter === type ? 'primary' : 'secondary'"
+        @click="filteredTasks(type)"
+        :variant="filterCompleted === type ? 'primary' : 'secondary'"
         full-width
       >
         {{
@@ -71,16 +62,13 @@ const toggleCompletion = async task => {
 
     <div class="mt-6">
       <div class="flex flex-col space-y-4">
-        <AppLoader v-if="state.loading" />
-        <div
-          v-else-if="filteredTasks.length === 0"
-          class="text-center text-gray-500"
-        >
+        <AppLoader v-if="loading" />
+        <div v-else-if="tasks.length === 0" class="text-center text-gray-500">
           Nenhuma tarefa encontrada.
         </div>
 
         <div
-          v-for="task in filteredTasks"
+          v-for="task in tasks"
           :key="task.id"
           class="bg-white px-4 py-2 rounded-md shadow-sm flex items-center space-x-3"
         >
@@ -105,6 +93,18 @@ const toggleCompletion = async task => {
           >
             <Edit class="w-4 h-4 text-gray-500" />
           </BaseButton>
+        </div>
+
+        <div v-if="!loading && taskStore.hasMore" class="mt-4 text-center">
+          <BaseButton variant="secondary" @click="loadMore">
+            Carregar mais
+          </BaseButton>
+        </div>
+        <div
+          v-else-if="!loading && !taskStore.hasMore"
+          class="text-center text-gray-400"
+        >
+          Nenhuma tarefa adicional.
         </div>
       </div>
     </div>
